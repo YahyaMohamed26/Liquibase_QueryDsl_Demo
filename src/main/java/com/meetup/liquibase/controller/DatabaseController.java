@@ -14,12 +14,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 
 @RestController
-@RequestMapping("/database/")
+@RequestMapping("/database")
 @RequiredArgsConstructor
 @Slf4j
 public class DatabaseController {
@@ -28,8 +31,8 @@ public class DatabaseController {
     private final QueryDslService queryDslService;
 
     @GetMapping("/publish-changes")
-    public String publishChanges() throws LiquibaseException, IOException {
-        return liquibaseService.updateRemoteDatabaseFromLocalChanges();
+    public String publishChanges(@RequestPart(value = "file") MultipartFile file) throws LiquibaseException, IOException {
+        return liquibaseService.updateDatabase(file);
     }
 
     @GetMapping("/search")

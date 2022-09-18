@@ -1,4 +1,4 @@
-package com.meetup.liquibase.api;
+package com.meetup.liquibase;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
