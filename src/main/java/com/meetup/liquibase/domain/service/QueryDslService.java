@@ -1,15 +1,40 @@
 package com.meetup.liquibase.domain.service;
 
-import com.meetup.liquibase.domain.model.Entity;
 import com.meetup.liquibase.domain.model.EntityRequest;
-import com.meetup.liquibase.domain.model.QEntity;
-import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.PathMetadata;
+import com.querydsl.core.types.PathMetadataFactory;
+import com.querydsl.core.types.Predicate;
+
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.core.types.dsl.PathBuilder;
+import com.querydsl.core.types.dsl.SimpleExpression;
+
+import com.querydsl.sql.PostgreSQLTemplates;
+import com.querydsl.sql.RelationalPath;
+import com.querydsl.sql.RelationalPathBase;
+import com.querydsl.sql.SQLQuery;
+import com.querydsl.sql.SQLQueryFactory;
+import com.querydsl.sql.spring.SpringConnectionProvider;
+import com.querydsl.sql.spring.SpringExceptionTranslator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.object.SqlQuery;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedCaseInsensitiveMap;
 
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.sql.DataSource;
+import java.lang.reflect.Method;
+import java.sql.Connection;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -18,15 +43,62 @@ public class QueryDslService {
 
     @PersistenceContext
     private EntityManager entityManager;
+    private final DataSource dataSource;
 
-    public static final QEntity entity = new QEntity("entity");
 
 
+    @Transactional
     public String searchEntity(String tableName, EntityRequest entityRequest) {
-        JPAQueryFactory queryFactory = new JPAQueryFactory(entityManager);
-        QEntity entity = QEntity.entity;
-        Entity e = queryFactory.selectFrom(entity).where(entity.name.eq("ertugrul")).fetchOne();
-        return e.getName();
+        Connection connection = DataSourceUtils.getConnection(dataSource);
+
+        SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
+        com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
+        configuration.setExceptionTranslator(new SpringExceptionTranslator());
+
+        SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, connectionProvider);
+
+        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, "person", "person", "person");
+
+        LinkedCaseInsensitiveMap<Expression> expressions = new LinkedCaseInsensitiveMap<>();
+
+
+        PathMetadata metadata = PathMetadataFactory.forVariable("person");
+        PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
+
+        for (Object s :  entityRequest.fields.values()) {
+            if (s.equals("id")) {
+                expressions.put(s.toString() ,pathBuilder.getNumber("id", Long.class));
+
+            } else if (s.equals("lastname") || s.equals("firstname") || s.equals("state")) {
+                expressions.put(s.toString(), pathBuilder.getString(s.toString()));
+
+            }
+        }
+
+        Set<Predicate> predicateSet = new HashSet<>();
+
+        for (String s : expressions.keySet()) {
+            if (entityRequest.predicateSet.get("eq").get("field").equals(s)) {
+                for (Method m : expressions.get(s).getClass().getMethods()) {
+                    if (m.getName().equals(Arrays.stream(entityRequest.predicateSet.keySet().toArray()).findFirst().get())) {
+                        try {
+                            predicateSet.add((Predicate) m.invoke(expressions.get(s), entityRequest.predicateSet.get("eq").get("value")));
+                            break;
+                        } catch (Exception exception) {
+                            throw new RuntimeException(exception);
+                        }
+                    }
+                }
+            }
+        }
+
+        //SQLQuery sqlQuery = new SQLQuery(connection, PostgreSQLTemplates.DEFAULT);
+        SQLQuery<Tuple> sqlQuery = queryFactory
+                .select(expressions.values().toArray(new Expression[0]))
+                .from(relationalPath)
+                .where(predicateSet.toArray(new Predicate[0]));
+        sqlQuery.fetchOne();
+        return "";
     }
 
     public String saveEntityToTable(String tableName, EntityRequest entityRequest) {
