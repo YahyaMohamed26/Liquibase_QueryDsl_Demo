@@ -1,0 +1,39 @@
+{
+  "databaseChangeLog": [
+    {
+      "preConditions": [
+        {
+          "runningAs": {
+            "username": "postgres"
+          }
+        }
+      ]
+    },
+    {
+      "changeSet": {
+        "id": "2",
+        "author": "yahya",
+        "changes": [
+          {
+            "addColumn": {
+              "tableName": "author",
+              "columns": [
+                {
+                  "column": {
+                    "name": "age",
+                    "type": "int",
+                    "constraints": {
+                      "primaryKey": false,
+                      "nullable": false
+                    },
+
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

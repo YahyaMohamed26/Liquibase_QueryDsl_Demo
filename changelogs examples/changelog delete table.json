@@ -1,0 +1,28 @@
+{
+  "databaseChangeLog": [
+    {
+      "preConditions": [
+        {
+          "runningAs": {
+            "username": "postgres"
+          }
+        }
+      ]
+    },
+    {
+      "changeSet": {
+        "id": "4",
+        "author": "yahya",
+        "changes": [
+          {
+            "dropTable": {
+              "tableName": "author",
+              "schemaName": "public",
+              "cascadeConstraints": "true"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
