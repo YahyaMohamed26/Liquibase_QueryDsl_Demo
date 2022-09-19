@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 @RestController
@@ -36,7 +37,7 @@ public class DatabaseController {
         return liquibaseService.updateDatabase(file);
     }
 
-    @GetMapping("/{table_name}/search")
+    @PostMapping("/{table_name}/search")
     public String searchEntity(@PathVariable("table_name") String tableName,
                                @RequestBody EntityRequest entityRequest) {
         return queryDslService.searchEntity(tableName, entityRequest);
