@@ -1,0 +1,91 @@
+{
+  "databaseChangeLog": [
+    {
+      "preConditions": [
+        {
+          "runningAs": {
+            "username": "postgres"
+          }
+        }
+      ]
+    },
+    {
+      "changeSet": {
+        "id": "1",
+        "author": "yahya",
+        "changes": [
+          {
+            "createTable": {
+              "tableName": "book",
+              "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "type": "int",
+                    "autoIncrement": true,
+                    "constraints": {
+                      "primaryKey": true,
+                      "nullable": false
+                    },
+
+                  }
+                },
+                {
+                  "column": {
+                    "name": "name",
+                    "type": "varchar(50)"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "author",
+                    "type": "varchar(50)",
+                    "constraints": {
+                      "nullable": false
+                    },
+
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "createTable": {
+              "tableName": "author",
+              "columns": [
+                {
+                  "column": {
+                    "name": "id",
+                    "type": "int",
+                    "autoIncrement": true,
+                    "constraints": {
+                      "primaryKey": true,
+                      "nullable": false
+                    },
+
+                  }
+                },
+                {
+                  "column": {
+                    "name": "firstName",
+                    "type": "varchar(50)"
+                  }
+                },
+                {
+                  "column": {
+                    "name": "lastName",
+                    "type": "varchar(50)",
+                    "constraints": {
+                      "nullable": false
+                    },
+
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
