@@ -38,13 +38,13 @@ public class DatabaseController {
     }
 
     @PostMapping("/{table_name}/search")
-    public String searchEntity(@PathVariable("table_name") String tableName,
+    public Object searchEntity(@PathVariable("table_name") String tableName,
                                @RequestBody EntityRequest entityRequest) {
         return queryDslService.searchEntity(tableName, entityRequest);
     }
 
     @PostMapping("/{table_name}/save")
-    public String saveEntityToTable(@PathVariable("table_name") String tableName,
+    public Object saveEntityToTable(@PathVariable("table_name") String tableName,
                                     @RequestBody EntityRequest entityRequest) {
         return queryDslService.saveEntityToTable(tableName, entityRequest);
     }

@@ -51,27 +51,26 @@ public class QueryDslService {
     private final DataSource dataSource;
 
     @Transactional
-    public String searchEntity(String tableName, EntityRequest entityRequest) {
+    public Object searchEntity(String tableName, EntityRequest entityRequest) {
         SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
         configuration.setExceptionTranslator(new SpringExceptionTranslator());
 
         SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
-        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, "person", "person", "person");
+        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
 
         LinkedCaseInsensitiveMap<Expression> expressions = new LinkedCaseInsensitiveMap<>();
 
-
-        PathMetadata metadata = PathMetadataFactory.forVariable("person");
+        PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
         PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 
-        for (Object s : entityRequest.getFields().values()) {
-            if (s.equals("id")) {
-                expressions.put(s.toString(), pathBuilder.getNumber("id", Long.class));
+        for (Object fieldName : entityRequest.getFields().values()) {
+            if (fieldName.equals("id")) {
+                expressions.put(fieldName.toString(), pathBuilder.getNumber("id", Long.class));
 
             } else {
-                expressions.put(s.toString(), pathBuilder.getString(s.toString()));
+                expressions.put(fieldName.toString(), pathBuilder.getString(fieldName.toString()));
 
             }
         }
@@ -98,11 +97,11 @@ public class QueryDslService {
                 .select(expressions.values().toArray(new Expression[0]))
                 .from(relationalPath)
                 .where(predicateSet.toArray(new Predicate[0]));
-        sqlQuery.fetchOne();
-        return "";
+        return sqlQuery.fetchOne().get(expressions.get("first_name"));
     }
 
-    public String saveEntityToTable(String tableName, EntityRequest entityRequest) {
+    @Transactional
+    public Object saveEntityToTable(String tableName, EntityRequest entityRequest) {
 
         SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
@@ -114,22 +113,22 @@ public class QueryDslService {
         RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
         StoreClause<?> storeSqlClause = sqlQueryFactory.insert(relationalPath);
 
-        LinkedHashMap<String, Object> saveEntityRequest = entityRequest.getFields();
+        LinkedHashMap<String, Object> saveEntityRequest = entityRequest.getSaveEntityRequest();
         saveEntityRequest.put("id", id);
 
         PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
         PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 
-        for (Object fieldName : entityRequest.getFields().keySet()) {
+        for (Object fieldName : saveEntityRequest.keySet()) {
             if (fieldName.equals("id")) {
                 storeSqlClause.set(pathBuilder.getNumber("id", Long.class), saveEntityRequest.get(fieldName));
             } else  {
-                storeSqlClause.set(pathBuilder.getString(fieldName.toString()), (Expression<String>) saveEntityRequest.get(fieldName));
+                storeSqlClause.set((Path)pathBuilder.getString(fieldName.toString()), saveEntityRequest.get(fieldName));
             }
         }
 
         storeSqlClause.execute();
 
-        return null;
+        return saveEntityRequest;
     }
 }

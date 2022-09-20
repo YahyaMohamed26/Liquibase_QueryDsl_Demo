@@ -14,4 +14,5 @@ public class EntityRequest {
     private String tableName;
     private LinkedHashMap<String, Object> fields = new LinkedHashMap<>();
     private LinkedHashMap<String, LinkedHashMap<String, Object>> predicateSet = new LinkedHashMap<>();
+    private LinkedHashMap<String, Object> saveEntityRequest = new LinkedHashMap<>();
 }
