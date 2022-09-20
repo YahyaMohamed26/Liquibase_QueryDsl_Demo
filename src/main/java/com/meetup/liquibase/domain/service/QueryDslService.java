@@ -49,12 +49,9 @@ public class QueryDslService {
     @PersistenceContext
     private EntityManager entityManager;
     private final DataSource dataSource;
-    // private final SQLQueryFactory sqlQueryFactory;
 
     @Transactional
     public String searchEntity(String tableName, EntityRequest entityRequest) {
-        Connection connection = DataSourceUtils.getConnection(dataSource);
-
         SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
         configuration.setExceptionTranslator(new SpringExceptionTranslator());
@@ -73,7 +70,7 @@ public class QueryDslService {
             if (s.equals("id")) {
                 expressions.put(s.toString(), pathBuilder.getNumber("id", Long.class));
 
-            } else if (s.equals("lastname") || s.equals("firstname") || s.equals("state")) {
+            } else {
                 expressions.put(s.toString(), pathBuilder.getString(s.toString()));
 
             }
@@ -107,8 +104,6 @@ public class QueryDslService {
 
     public String saveEntityToTable(String tableName, EntityRequest entityRequest) {
 
-        Connection connection = DataSourceUtils.getConnection(dataSource);
-
         SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
         configuration.setExceptionTranslator(new SpringExceptionTranslator());
@@ -116,15 +111,13 @@ public class QueryDslService {
         SQLQueryFactory sqlQueryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
         Long id = sqlQueryFactory.select(SQLExpressions.nextval(tableName + "_id_seq")).fetchOne();
-        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, "person", "person", "person");
-        StoreClause<?> storeSqlClause;
-
-        storeSqlClause = sqlQueryFactory.insert(relationalPath);
+        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
+        StoreClause<?> storeSqlClause = sqlQueryFactory.insert(relationalPath);
 
         LinkedHashMap<String, Object> saveEntityRequest = entityRequest.getFields();
         saveEntityRequest.put("id", id);
 
-        PathMetadata metadata = PathMetadataFactory.forVariable("person");
+        PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
         PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 
         for (Object fieldName : entityRequest.getFields().keySet()) {
@@ -137,6 +130,6 @@ public class QueryDslService {
 
         storeSqlClause.execute();
 
-        return searchEntity(tableName, entityRequest);
+        return null;
     }
 }

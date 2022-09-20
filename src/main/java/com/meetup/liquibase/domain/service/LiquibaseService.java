@@ -33,15 +33,15 @@ public class LiquibaseService {
     private final DataSource dataSource;
 
     public String updateDatabase(MultipartFile file) throws LiquibaseException, IOException {
-        write(file, Path.of("/Users/yelnouby/Desktop/Liquibase_QueryDsl_Demo/src/main/resources/db/changelog"));
+        write(file, Path.of("/Users/isikozsoy/Desktop/Liquibase_QueryDsl_Demo/changelogs examples"));
 
-        ResourceAccessor accessor = new FileSystemResourceAccessor(new File("/Users/yelnouby/Desktop/Liquibase_QueryDsl_Demo/src/main/resources/db/changelog"));
+        ResourceAccessor accessor = new FileSystemResourceAccessor(new File("/Users/isikozsoy/Desktop/Liquibase_QueryDsl_Demo/changelogs examples"));
 
         Connection connection = DataSourceUtils.getConnection(dataSource);
 
         Database database = DatabaseFactory.getInstance().findCorrectDatabaseImplementation(new JdbcConnection(connection));
 
-        Liquibase liquibase = new liquibase.Liquibase("/Users/yelnouby/Desktop/Liquibase_QueryDsl_Demo/src/main/resources/db/changelog/changelog.json", accessor, database);
+        Liquibase liquibase = new liquibase.Liquibase("/Users/isikozsoy/Desktop/Liquibase_QueryDsl_Demo/changelogs examples/changelog.json", accessor, database);
 
         liquibase.update(new Contexts(), new LabelExpression());
 
