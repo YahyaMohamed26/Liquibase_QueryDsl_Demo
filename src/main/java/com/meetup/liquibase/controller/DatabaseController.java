@@ -1,10 +1,9 @@
 package com.meetup.liquibase.controller;
 
-import com.meetup.liquibase.domain.model.Entity;
 import com.meetup.liquibase.domain.model.EntityRequest;
 import com.meetup.liquibase.domain.service.LiquibaseService;
 import com.meetup.liquibase.domain.service.QueryDslService;
-import com.querydsl.core.Tuple;
+
 import liquibase.exception.LiquibaseException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -37,9 +37,10 @@ public class DatabaseController {
         return liquibaseService.updateDatabase(file);
     }
 
+
     @PostMapping("/{table_name}/search")
-    public Object searchEntity(@PathVariable("table_name") String tableName,
-                               @RequestBody EntityRequest entityRequest) {
+    public ArrayList<String> searchEntity(@PathVariable("table_name") String tableName,
+                                          @RequestBody EntityRequest entityRequest) {
         return queryDslService.searchEntity(tableName, entityRequest);
     }
 

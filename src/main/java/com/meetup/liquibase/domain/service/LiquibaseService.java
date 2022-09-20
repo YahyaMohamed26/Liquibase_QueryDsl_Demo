@@ -7,7 +7,6 @@ import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.exception.LiquibaseException;
-import liquibase.resource.ClassLoaderResourceAccessor;
 import liquibase.resource.FileSystemResourceAccessor;
 import liquibase.resource.ResourceAccessor;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +24,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 
-import static org.postgresql.core.ConnectionFactory.openConnection;
 @Service
 @RequiredArgsConstructor
 @Slf4j
