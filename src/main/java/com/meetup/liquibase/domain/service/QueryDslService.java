@@ -31,12 +31,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class QueryDslService {
 
     private final DataSource dataSource;
@@ -97,8 +97,6 @@ public class QueryDslService {
             result.add(t.toString());
         }
 
-        System.out.println(sqlQuery);
-
         return result;
     }
 
@@ -109,17 +107,22 @@ public class QueryDslService {
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
         configuration.setExceptionTranslator(new SpringExceptionTranslator());
 
+        PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
+        PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
         SQLQueryFactory sqlQueryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
         Long id = sqlQueryFactory.select(SQLExpressions.nextval(tableName + "_id_seq")).fetchOne();
         RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
-        StoreClause<?> storeSqlClause = sqlQueryFactory.insert(relationalPath);
+        StoreClause<?> storeSqlClause;
 
         LinkedHashMap<String, Object> saveEntityRequest = entityRequest.getSaveEntityRequest();
-        saveEntityRequest.put("id", id);
+        if (Objects.isNull(entityRequest.getSaveEntityRequest().get("id"))) {
+            saveEntityRequest.put("id", id);
+            storeSqlClause = sqlQueryFactory.insert(relationalPath);
+        } else {
+            storeSqlClause = sqlQueryFactory.update(relationalPath).where(pathBuilder.getNumber("id", Long.class).eq(saveEntityRequest.get("id")));
+        }
 
-        PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
-        PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 
         for (Object fieldName : saveEntityRequest.keySet()) {
             if (fieldName.equals("id")) {
