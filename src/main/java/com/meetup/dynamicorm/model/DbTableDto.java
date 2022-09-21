@@ -23,16 +23,6 @@ public class DbTableDto {
 
 	private String description;
 
-	private Boolean isClassificationEnabled = false;
-
-	private Boolean isPublished = false;
-
-	private Boolean isStateTransitionEnabled = false;
-
-	private Boolean isAttachmentEnabled = false;
-
-	private Boolean isAuditEnabled = false;
-
 	private Set<DbColumnDto> columnSet = new LinkedHashSet<>();
 
 }
