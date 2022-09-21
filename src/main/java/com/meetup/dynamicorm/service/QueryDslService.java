@@ -1,9 +1,7 @@
 package com.meetup.dynamicorm.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetup.dynamicorm.model.SaveEntityRequest;
 import com.meetup.dynamicorm.model.SearchEntityRequest;
-import com.meetup.liquibase.domain.model.EntityRequest;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.dml.StoreClause;
 import com.querydsl.core.types.Expression;
@@ -153,11 +151,11 @@ public class QueryDslService {
 		com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
 		configuration.setExceptionTranslator(new SpringExceptionTranslator());
 
-		PathMetadata metadata = PathMetadataFactory.forVariable(nameGeneratorService.getTableAliasName(tableName));
+		PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
 		PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 		SQLQueryFactory sqlQueryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
-		RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, nameGeneratorService.getTableAliasName(tableName), "public", tableName);
+		RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
 		StoreClause<?> storeSqlClause;
 
 		if (Objects.isNull(saveEntityRequest.get("id"))) {
