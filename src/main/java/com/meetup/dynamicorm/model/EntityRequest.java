@@ -1,4 +1,4 @@
-package com.meetup.liquibase.domain.model;
+package com.meetup.dynamicorm.model;
 
 import lombok.Getter;
 
@@ -9,6 +9,6 @@ import java.util.List;
 @Getter
 public class EntityRequest {
     private List<String> fields = new ArrayList<>();
-    private LinkedHashMap<String, LinkedHashMap<String, Object>> predicateSet = new LinkedHashMap<>();
+    private List<LinkedHashMap<String, Object>> predicateSet = new ArrayList<>();
     private LinkedHashMap<String, Object> saveEntityRequest = new LinkedHashMap<>();
 }
