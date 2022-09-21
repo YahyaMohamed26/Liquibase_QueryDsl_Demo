@@ -1,13 +1,42 @@
 {
 	"info": {
-		"_postman_id": "b6f9f160-efea-4ab5-9860-f45bdfb2ccfc",
+		"_postman_id": "a3dfe8f1-549c-47ec-ae59-3c605a9d0f8c",
 		"name": "Dynmaic ORM - Meetup",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "11909840"
 	},
 	"item": [
 		{
-			"name": "Publish DB Changes",
+			"name": "Create Book Table",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "[\n    {\n        \"name\": \"book\",\n        \"description\": \"Books table\",\n        \"columnSet\": [\n            {\n                \"name\": \"id\",\n                \"description\": \"ID\",\n                \"columnType\": \"bigint\",\n                \"isPk\": true,\n                \"length\": null,\n                \"scale\": null,\n                \"isNullable\": false,\n                \"isUnique\": true,\n                \"defaultValue\": null\n            },\n            {\n                \"name\": \"title\",\n                \"description\": \"Book title\",\n                \"columnType\": \"varchar\",\n                \"isPk\": false,\n                \"length\": 255,\n                \"scale\": null,\n                \"isNullable\": false,\n                \"isUnique\": false,\n                \"defaultValue\": null\n            }\n        ]\n    }\n]",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/database-schema/publish-changes",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"database-schema",
+						"publish-changes"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Book Table - add column",
 			"request": {
 				"method": "POST",
 				"header": [],
@@ -36,13 +65,71 @@
 			"response": []
 		},
 		{
+			"name": "Query Book entity by id",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"fields\": [\n        \"id\",\n        \"title\",\n        \"isbn\"\n    ],\n    \"predicateSet\": [\n        {\n            \"goe\": {\n                \"field\": \"id\",\n                \"value\": 0\n            }\n        },\n        {\n            \"loe\": {\n                \"field\": \"id\",\n                \"value\": 5\n            }\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/query/book",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"query",
+						"book"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "Query Book entities",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"fields\": [\n        \"id\",\n        \"title\",\n        \"isbn\"\n    ],\n    \"predicateSet\": [\n        {\n            \"goe\": {\n                \"field\": \"id\",\n                \"value\": 0\n            }\n        },\n        {\n            \"loe\": {\n                \"field\": \"id\",\n                \"value\": 1\n            }\n        }\n    ]\n}",
+					"raw": "{\n    \"fields\": [\n        \"id\",\n        \"title\",\n        \"isbn\"\n    ],\n    \"predicateSet\": [\n        {\n            \"goe\": {\n                \"field\": \"id\",\n                \"value\": 0\n            }\n        },\n        {\n            \"loe\": {\n                \"field\": \"id\",\n                \"value\": 5\n            }\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/query/book",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"query",
+						"book"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Query Book entities LIKE title",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"fields\": [\n        \"id\",\n        \"title\",\n        \"isbn\"\n    ],\n    \"predicateSet\": [\n        {\n            \"like\": {\n                \"field\": \"title\",\n                \"value\": \"A%\"\n            }\n        }\n    ]\n}",
 					"options": {
 						"raw": {
 							"language": "json"

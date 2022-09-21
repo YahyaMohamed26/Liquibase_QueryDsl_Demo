@@ -70,7 +70,7 @@ public class QueryDslService {
 		/**
 		 *     "predicateSet": [
 		 *         {
-		 *             "ge": {
+		 *             "goe": {
 		 *                 "field": "id",
 		 *                 "value": 1
 		 *             }
@@ -93,7 +93,9 @@ public class QueryDslService {
             Method operationMethod = null;
 			for (Method m : expression.getClass().getMethods()) {
 				Class<?>[] parameterTypes = m.getParameterTypes();
-				if (m.getName().equals(operation) && !Expression.class.isAssignableFrom(parameterTypes[0])) {
+				if (m.getName().equals(operation)
+						&& m.getParameterCount() == 1
+						&& !Expression.class.isAssignableFrom(parameterTypes[0])) {
                     operationMethod = m;
 				}
 			}
@@ -132,13 +134,6 @@ public class QueryDslService {
 	}
 
 	/**
-	 *    INSERT INTO book(id, title)
-	 *    VALUES(1, 'ABC');
-	 *
-	 *
-	 *    UPDATE book
-	 *    SET title = 'ABC'
-	 *    WHERE id = 10;
 	 *
 	 * @param tableName
 	 * @param saveEntityRequest
@@ -158,6 +153,15 @@ public class QueryDslService {
 		RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
 		StoreClause<?> storeSqlClause;
 
+		/**
+		 *    INSERT INTO book(id, title)
+		 *    VALUES(1, 'ABC');
+		 *
+		 *
+		 *    UPDATE book
+		 *    SET title = 'ABC'
+		 *    WHERE id = 10;
+		 */
 		if (Objects.isNull(saveEntityRequest.get("id"))) {
 			Long idNextSequenceValue = sqlQueryFactory.select(SQLExpressions.nextval(nameGeneratorService.getSequenceName(tableName))).fetchOne();
 
