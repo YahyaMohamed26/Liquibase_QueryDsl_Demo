@@ -69,6 +69,7 @@ import java.util.Set;
 @Slf4j
 public class LiquibaseService {
 	private final DataSource dataSource;
+	private final NameGeneratorService nameGeneratorService;
 
 	@Transactional
 	public String updateRemoteDatabaseFromLocalChanges(List<DbTableDto> dbTableDtoList) throws LiquibaseException, IOException {
@@ -151,7 +152,7 @@ public class LiquibaseService {
 			}
 
 			// create sequence
-			Sequence sequence = new Sequence(catalogName, schemaName, String.format("%s_sequence", tableName));
+			Sequence sequence = new Sequence(catalogName, schemaName, nameGeneratorService.getSequenceName("%s_sequence"));
 			sequence.setMinValue(BigInteger.ONE);
 			sequence.setMaxValue(new BigInteger("2147483647"));
 			sequence.setIncrementBy(BigInteger.ONE);

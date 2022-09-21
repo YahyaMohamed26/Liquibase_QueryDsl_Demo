@@ -1,7 +1,9 @@
 package com.meetup.dynamicorm.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.meetup.dynamicorm.model.EntityRequest;
+import com.meetup.dynamicorm.model.SaveEntityRequest;
+import com.meetup.dynamicorm.model.SearchEntityRequest;
+import com.meetup.liquibase.domain.model.EntityRequest;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.dml.StoreClause;
 import com.querydsl.core.types.Expression;
@@ -10,7 +12,6 @@ import com.querydsl.core.types.PathMetadata;
 import com.querydsl.core.types.PathMetadataFactory;
 import com.querydsl.core.types.Predicate;
 import com.querydsl.core.types.dsl.PathBuilder;
-import com.querydsl.sql.H2Templates;
 import com.querydsl.sql.PostgreSQLTemplates;
 import com.querydsl.sql.RelationalPath;
 import com.querydsl.sql.RelationalPathBase;
@@ -28,138 +29,161 @@ import org.springframework.util.LinkedCaseInsensitiveMap;
 import javax.sql.DataSource;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class QueryDslService {
 
-    private final DataSource dataSource;
-    private final ObjectMapper objectMapper;
+	private final DataSource dataSource;
+	private final NameGeneratorService nameGeneratorService;
 
-    @Transactional(readOnly = true)
-    public List<LinkedHashMap<String, Object>> searchEntity(String tableName, EntityRequest entityRequest) throws Exception {
-        SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
-        com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
-        configuration.setExceptionTranslator(new SpringExceptionTranslator());
+	@Transactional(readOnly = true)
+	public List<LinkedHashMap<String, Object>> searchEntity(String tableName, SearchEntityRequest entityRequest) throws Exception {
+		SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
+		com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
+		configuration.setExceptionTranslator(new SpringExceptionTranslator());
 
-        SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, connectionProvider);
+		SQLQueryFactory queryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
-        String sqlTableVariableName = "_" + tableName;
-        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, sqlTableVariableName, "public", tableName);
+		RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, nameGeneratorService.getTableAliasName(tableName), "public", tableName);
 
-        LinkedCaseInsensitiveMap<Expression> expressions = new LinkedCaseInsensitiveMap<>();
+		LinkedCaseInsensitiveMap<Expression> expressions = new LinkedCaseInsensitiveMap<>();
 
-        PathMetadata metadata = PathMetadataFactory.forVariable(sqlTableVariableName);
-        PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
+		PathMetadata metadata = PathMetadataFactory.forVariable(nameGeneratorService.getTableAliasName(tableName));
+		PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
 
-        for (String fieldName : entityRequest.getFields()) {
-            if (fieldName.equals("id")) {
-                expressions.put(fieldName, pathBuilder.getNumber(fieldName, Long.class));
+		for (String fieldName : entityRequest.getFields()) {
+			if (fieldName.equals("id")) {
+				expressions.put(fieldName, pathBuilder.getNumber(fieldName, Long.class));
 
-            } else {
-                expressions.put(fieldName, pathBuilder.getString(fieldName));
+			} else {
+				expressions.put(fieldName, pathBuilder.getString(fieldName));
+			}
+		}
+
+		List<Predicate> predicateList = new ArrayList<>();
+
+
+		/**
+		 *     "predicateSet": [
+		 *         {
+		 *             "ge": {
+		 *                 "field": "id",
+		 *                 "value": 1
+		 *             }
+		 *         },
+		 *         {
+		 *             "lt": {
+		 *                 "field": "id",
+		 *                 "value": 5
+		 *             }
+		 *         }
+		 *     ]
+		 */
+		for (LinkedHashMap<String, Object> entityRequestPredicate : entityRequest.getPredicateSet()) {
+			String operation = entityRequestPredicate.keySet().stream().findFirst().get();
+			LinkedHashMap<String, Object> predicateMap = (LinkedHashMap) entityRequestPredicate.get(operation);
+			String fieldName = (String) predicateMap.get("field");
+			Object value = predicateMap.get("value");
+
+			Expression expression = expressions.get(fieldName);
+            Method operationMethod = null;
+			for (Method m : expression.getClass().getMethods()) {
+				Class<?>[] parameterTypes = m.getParameterTypes();
+				if (m.getName().equals(operation) && !Expression.class.isAssignableFrom(parameterTypes[0])) {
+                    operationMethod = m;
+				}
+			}
+
+            if (operationMethod == null) {
+                throw new UnsupportedOperationException("unsupported operation : " + operation);
             }
-        }
 
-        Set<Predicate> predicateSet = new HashSet<>();
-
-
-        /**
-         *     "predicateSet": [
-         *         {
-         *             "ge": {
-         *                 "field": "id",
-         *                 "value": 1
-         *             }
-         *         },
-         *         {
-         *             "lt": {
-         *                 "field": "id",
-         *                 "value": 5
-         *             }
-         *         }
-         *     ]
-         */
-        for (LinkedHashMap<String, Object> entityRequestPredicate : entityRequest.getPredicateSet()) {
-            String operation = entityRequestPredicate.keySet().stream().findFirst().get();
-            LinkedHashMap<String, Object> predicateMap = (LinkedHashMap) entityRequestPredicate.get(operation);
-            String fieldName = (String) predicateMap.get("field");
-            Object value = predicateMap.get("value");
-
-            Expression expression = expressions.get(fieldName);
-            for (Method m : expression.getClass().getMethods()) {
-                Class<?>[] parameterTypes = m.getParameterTypes();
-                if (m.getName().equals(operation) && !Expression.class.isAssignableFrom(parameterTypes[0])) {
-                    try {
-                        predicateSet.add((Predicate) m.invoke(expression, value));
-                        break;
-                    } catch (Exception exception) {
-                        throw new RuntimeException(exception);
-                    }
-                }
+            try {
+                predicateList.add((Predicate) operationMethod.invoke(expression, value));
+            } catch (Exception exception) {
+                throw new RuntimeException(exception);
             }
 
-        }
+		}
 
-        SQLQuery<Tuple> sqlQuery = queryFactory
-                .select(expressions.values().toArray(new Expression[0]))
-                .from(relationalPath)
-                .where(predicateSet.toArray(new Predicate[0]));
+		SQLQuery<Tuple> sqlQuery = queryFactory
+				.select(expressions.values().toArray(new Expression[0]))
+				.from(relationalPath)
+				.where(predicateList.toArray(new Predicate[0]));
 
-        ArrayList<LinkedHashMap<String, Object>> result = new ArrayList<>();
+        log.info(sqlQuery.toString());
 
-        for (Tuple t : sqlQuery.fetch()) {
-            LinkedHashMap<String, Object> entityMap = new LinkedHashMap<>();
-            for (Map.Entry<String, Expression> expressionEntry : expressions.entrySet()) {
-                String fieldName = expressionEntry.getKey();
-                entityMap.put(fieldName, t.get(expressionEntry.getValue()));
-            }
-            result.add(entityMap);
-        }
+		ArrayList<LinkedHashMap<String, Object>> result = new ArrayList<>();
 
-        return result;
-    }
+		for (Tuple t : sqlQuery.fetch()) {
+			LinkedHashMap<String, Object> entityMap = new LinkedHashMap<>();
+			for (Map.Entry<String, Expression> expressionEntry : expressions.entrySet()) {
+				String fieldName = expressionEntry.getKey();
+				entityMap.put(fieldName, t.get(expressionEntry.getValue()));
+			}
+			result.add(entityMap);
+		}
 
-    @Transactional
-    public Object saveEntityToTable(String tableName, LinkedHashMap<String, Object> entitySaveRequest) {
+		return result;
+	}
 
-        SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
-        com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
-        configuration.setExceptionTranslator(new SpringExceptionTranslator());
+	/**
+	 *    INSERT INTO book(id, title)
+	 *    VALUES(1, 'ABC');
+	 *
+	 *
+	 *    UPDATE book
+	 *    SET title = 'ABC'
+	 *    WHERE id = 10;
+	 *
+	 * @param tableName
+	 * @param saveEntityRequest
+	 * @return
+	 */
+	@Transactional
+	public SaveEntityRequest saveEntityToTable(String tableName, SaveEntityRequest saveEntityRequest) {
 
-        PathMetadata metadata = PathMetadataFactory.forVariable(tableName);
-        PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
-        SQLQueryFactory sqlQueryFactory = new SQLQueryFactory(configuration, connectionProvider);
+		SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
+		com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
+		configuration.setExceptionTranslator(new SpringExceptionTranslator());
 
-        Long id = sqlQueryFactory.select(SQLExpressions.nextval(tableName + "_id_seq")).fetchOne();
-        RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
-        StoreClause<?> storeSqlClause;
+		PathMetadata metadata = PathMetadataFactory.forVariable(nameGeneratorService.getTableAliasName(tableName));
+		PathBuilder pathBuilder = new PathBuilder<>(Object.class, metadata);
+		SQLQueryFactory sqlQueryFactory = new SQLQueryFactory(configuration, connectionProvider);
 
-        if (Objects.isNull(entitySaveRequest.get("id"))) {
-            entitySaveRequest.put("id", id);
-            storeSqlClause = sqlQueryFactory.insert(relationalPath);
-        } else {
-            storeSqlClause = sqlQueryFactory.update(relationalPath).where(pathBuilder.getNumber("id", Long.class).eq(entitySaveRequest.get("id")));
-        }
+		RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, nameGeneratorService.getTableAliasName(tableName), "public", tableName);
+		StoreClause<?> storeSqlClause;
+
+		if (Objects.isNull(saveEntityRequest.get("id"))) {
+			Long idNextSequenceValue = sqlQueryFactory.select(SQLExpressions.nextval(nameGeneratorService.getSequenceName(tableName))).fetchOne();
+
+			saveEntityRequest.put("id", idNextSequenceValue);
+			storeSqlClause = sqlQueryFactory.insert(relationalPath);
+		} else {
+			storeSqlClause = sqlQueryFactory.update(relationalPath)
+					.where(pathBuilder.getNumber("id", Long.class).eq(saveEntityRequest.get("id")));
+		}
 
 
-        for (Object fieldName : entitySaveRequest.keySet()) {
-            if (fieldName.equals("id")) {
-                storeSqlClause.set(pathBuilder.getNumber("id", Long.class), entitySaveRequest.get(fieldName));
-            } else  {
-                storeSqlClause.set((Path)pathBuilder.getString(fieldName.toString()), entitySaveRequest.get(fieldName));
-            }
-        }
-        storeSqlClause.execute();
+		for (Object fieldName : saveEntityRequest.keySet()) {
+			if (fieldName.equals("id")) {
+				storeSqlClause.set(pathBuilder.getNumber("id", Long.class), saveEntityRequest.get(fieldName));
+			} else {
+				storeSqlClause.set((Path) pathBuilder.getString(fieldName.toString()), saveEntityRequest.get(fieldName));
+			}
+		}
 
-        return entitySaveRequest;
-    }
+		log.info(storeSqlClause.toString());
+
+		storeSqlClause.execute();
+
+		return saveEntityRequest;
+	}
+
 }
