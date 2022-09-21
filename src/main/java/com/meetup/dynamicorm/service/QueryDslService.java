@@ -129,7 +129,7 @@ public class QueryDslService {
     }
 
     @Transactional
-    public Object saveEntityToTable(String tableName, EntityRequest entityRequest) {
+    public Object saveEntityToTable(String tableName, LinkedHashMap<String, Object> entitySaveRequest) {
 
         SpringConnectionProvider connectionProvider = new SpringConnectionProvider(dataSource);
         com.querydsl.sql.Configuration configuration = new com.querydsl.sql.Configuration(new PostgreSQLTemplates());
@@ -143,24 +143,23 @@ public class QueryDslService {
         RelationalPath<Object> relationalPath = new RelationalPathBase<Object>(Object.class, tableName, "public", tableName);
         StoreClause<?> storeSqlClause;
 
-        LinkedHashMap<String, Object> saveEntityRequest = entityRequest.getSaveEntityRequest();
-        if (Objects.isNull(entityRequest.getSaveEntityRequest().get("id"))) {
-            saveEntityRequest.put("id", id);
+        if (Objects.isNull(entitySaveRequest.get("id"))) {
+            entitySaveRequest.put("id", id);
             storeSqlClause = sqlQueryFactory.insert(relationalPath);
         } else {
-            storeSqlClause = sqlQueryFactory.update(relationalPath).where(pathBuilder.getNumber("id", Long.class).eq(saveEntityRequest.get("id")));
+            storeSqlClause = sqlQueryFactory.update(relationalPath).where(pathBuilder.getNumber("id", Long.class).eq(entitySaveRequest.get("id")));
         }
 
 
-        for (Object fieldName : saveEntityRequest.keySet()) {
+        for (Object fieldName : entitySaveRequest.keySet()) {
             if (fieldName.equals("id")) {
-                storeSqlClause.set(pathBuilder.getNumber("id", Long.class), saveEntityRequest.get(fieldName));
+                storeSqlClause.set(pathBuilder.getNumber("id", Long.class), entitySaveRequest.get(fieldName));
             } else  {
-                storeSqlClause.set((Path)pathBuilder.getString(fieldName.toString()), saveEntityRequest.get(fieldName));
+                storeSqlClause.set((Path)pathBuilder.getString(fieldName.toString()), entitySaveRequest.get(fieldName));
             }
         }
         storeSqlClause.execute();
 
-        return saveEntityRequest;
+        return entitySaveRequest;
     }
 }

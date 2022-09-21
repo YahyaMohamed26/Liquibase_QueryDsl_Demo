@@ -50,14 +50,6 @@ public enum ColumnType {
 		columnTypeNumberTypeCastingMethodMap.put(BYTE, Byte::parseByte);
 	}
 
-	public static final String DOUBLE_REGEX = "\\d*[.]\\d+";
-	public static final String TIME_REGEX = "\\d{1,2}[:]\\d{1,2}[:]\\d{1,2}";
-	public static final String TIMESTAMP_REGEX ="\\d{4}[/]\\d{1,2}[/]\\d{1,2}[ ]\\d{1,2}[:]\\d{1,2}[:]\\d{1,2}";
-	public static final String DATE_REGEX = "\\d{1,2}[/]\\d{1,2}[/]\\d{4}";
-	public static final String INTEGER_REGEX = "\\d+";
-	public static final String BOOLEAN_REGEX = "true|false";
-	public static final String YES_NO_REGEX = "YES|NO";
-
 	private final String value;
 	private final boolean isNumeric;
 	private final boolean isText;
@@ -246,11 +238,6 @@ public enum ColumnType {
 		public static final String _TIMESTAMP = "datetime";
 		public static final String _BIG_DECIMAL = "decimal";
 		public static final String _BIG_INTEGER = "bigint";
-		//		public static final String _LOCALE = "locale";
-//		public static final String _TIMEZONE = "timezone";
-//		public static final String _CURRENCY = "currency";
-//		public static final String _CLASS = "class";
-//		public static final String _BINARY = "binary";
 		public static final String _TEXT = "nvarchar";
 		public static final String _CLOB = "clob";
 		public static final String _BLOB = "blob";

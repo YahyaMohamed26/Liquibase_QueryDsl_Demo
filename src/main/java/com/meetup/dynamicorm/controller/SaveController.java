@@ -1,9 +1,6 @@
 package com.meetup.dynamicorm.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.meetup.dynamicorm.model.DbTableDto;
 import com.meetup.dynamicorm.model.EntityRequest;
-import com.meetup.dynamicorm.service.LiquibaseService;
 import com.meetup.dynamicorm.service.QueryDslService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,14 +13,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 @RestController
-@RequestMapping("query")
+@RequestMapping("save")
 @RequiredArgsConstructor
-public class QueryController {
+public class SaveController {
 	private final QueryDslService queryDslService;
 
 	@PostMapping(value = "/{tableName}")
-	public List<LinkedHashMap<String, Object>> query(@PathVariable("tableName") String tableName, @RequestBody EntityRequest entityRequest) throws Exception {
-		return queryDslService.searchEntity(tableName, entityRequest);
+	public Object save(@PathVariable("tableName") String tableName, @RequestBody LinkedHashMap<String, Object> entitySaveRequest) throws Exception {
+		return queryDslService.saveEntityToTable(tableName, entitySaveRequest);
 	}
 
 }
