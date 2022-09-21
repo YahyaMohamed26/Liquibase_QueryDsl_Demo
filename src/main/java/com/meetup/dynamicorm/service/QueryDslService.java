@@ -1,9 +1,7 @@
 package com.meetup.dynamicorm.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.meetup.dynamicorm.model.SaveEntityRequest;
 import com.meetup.dynamicorm.model.SearchEntityRequest;
-import com.meetup.liquibase.domain.model.EntityRequest;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.dml.StoreClause;
 import com.querydsl.core.types.Expression;

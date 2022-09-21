@@ -15,13 +15,11 @@ import java.util.List;
 @RequestMapping("database-schema")
 @RequiredArgsConstructor
 public class DatabaseSchemaController {
-	private final ObjectMapper objectMapper;
 	private final LiquibaseService liquibaseService;
 
 	@PostMapping(value = "/publish-changes")
 	public String publishChanges(@RequestBody List<DbTableDto> dbTabelList) throws Exception {
-		liquibaseService.updateRemoteDatabaseFromLocalChanges(dbTabelList);
-		return objectMapper.writeValueAsString(dbTabelList);
+		return liquibaseService.updateRemoteDatabaseFromLocalChanges(dbTabelList);
 	}
 
 }

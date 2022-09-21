@@ -9,9 +9,11 @@ import liquibase.changelog.ChangeSet;
 import liquibase.database.Database;
 import liquibase.database.DatabaseFactory;
 import liquibase.database.ObjectQuotingStrategy;
+import liquibase.database.core.PostgresDatabase;
 import liquibase.database.jvm.JdbcConnection;
 import liquibase.datatype.DataTypeFactory;
 import liquibase.datatype.LiquibaseDataType;
+import liquibase.datatype.core.BigIntType;
 import liquibase.diff.DiffGeneratorFactory;
 import liquibase.diff.DiffResult;
 import liquibase.diff.compare.CompareControl;
@@ -62,6 +64,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -74,8 +77,9 @@ public class LiquibaseService {
 	@Transactional
 	public String updateRemoteDatabaseFromLocalChanges(List<DbTableDto> dbTableDtoList) throws LiquibaseException, IOException {
 		Connection connection = DataSourceUtils.getConnection(dataSource);
+
+		DatabaseSnapshot localDatabaseSnapshot = generateLocalDatabaseSnapshot(connection, dbTableDtoList);
 		DatabaseSnapshot remoteDatabaseSnapshot = generateRemoteDatabaseSnapshot(connection);
-		DatabaseSnapshot localDatabaseSnapshot = createLocalDatabaseSnapshot(connection, dbTableDtoList);
 		File xmlFile = createDiff(localDatabaseSnapshot, remoteDatabaseSnapshot);
 
 		updateRemoteDatabase(remoteDatabaseSnapshot.getDatabase(), xmlFile);
@@ -83,7 +87,39 @@ public class LiquibaseService {
 		return Files.readString(xmlFile.toPath(), StandardCharsets.UTF_8);
 	}
 
-	DatabaseObject[] generateDatabaseObjectArray(Database remoteDatabase, List<DbTableDto> dbTableDtoList) {
+	private File createDiff(DatabaseSnapshot localDatabaseSnapshot, DatabaseSnapshot remoteDatabaseSnapshot)
+			throws LiquibaseException, IOException {
+		DiffResult diffResult = DiffGeneratorFactory.getInstance()
+				.compare(localDatabaseSnapshot, remoteDatabaseSnapshot, createCompareControl());
+
+		DiffToChangeLog diffToChangeLog = new DiffToChangeLog(diffResult, createDiffOutputControl());
+
+		diffToChangeLog.setChangeSetAuthor("system");
+		diffToChangeLog.setChangeSetContext("production");
+		diffToChangeLog.setIdRoot("text.xml");
+
+		List<ChangeSet> changeSets = diffToChangeLog.generateChangeSets();
+		return createXMLFile(changeSets);
+
+	}
+
+
+	private DatabaseSnapshot generateLocalDatabaseSnapshot(Connection connection, List<DbTableDto> dbTableDtoList) {
+		try {
+			Database remoteDatabase = getRemoteDatabase(connection);
+			DatabaseSnapshot localDatabaseSnapshot = new EmptyDatabaseSnapshot(remoteDatabase);
+			DatabaseObjectCollection databaseObjectCollection = (DatabaseObjectCollection) localDatabaseSnapshot.getSerializableFieldValue("objects");
+
+			DatabaseObject[] databaseObjectArray = generateDatabaseObjectsFromMetadata(remoteDatabase, dbTableDtoList);
+			Arrays.stream(databaseObjectArray).forEach(databaseObjectCollection::add);
+
+			return localDatabaseSnapshot;
+		} catch (Exception ex) {
+			throw new RuntimeException(ex);
+		}
+	}
+
+	private DatabaseObject[] generateDatabaseObjectsFromMetadata(Database remoteDatabase, List<DbTableDto> dbTableDtoList) {
 		List<DatabaseObject> databaseObjectList = new ArrayList<>();
 
 		String catalogName = remoteDatabase.getDefaultCatalogName();
@@ -152,12 +188,17 @@ public class LiquibaseService {
 			}
 
 			// create sequence
-			Sequence sequence = new Sequence(catalogName, schemaName, nameGeneratorService.getSequenceName("%s_sequence"));
+			Sequence sequence = new Sequence(catalogName, schemaName, nameGeneratorService.getSequenceName(tableName));
 			sequence.setMinValue(BigInteger.ONE);
 			sequence.setMaxValue(new BigInteger("2147483647"));
 			sequence.setIncrementBy(BigInteger.ONE);
 			sequence.setStartValue(BigInteger.ONE);
 			sequence.setWillCycle(false);
+
+			if (remoteDatabase instanceof PostgresDatabase) {
+				sequence.setDataType(new BigIntType().toDatabaseDataType(remoteDatabase).getType().toLowerCase(Locale.ROOT));
+				sequence.setCacheSize(BigInteger.ONE);
+			}
 
 			databaseObjectList.add(sequence);
 
@@ -171,52 +212,25 @@ public class LiquibaseService {
 		return databaseObjectList.toArray(DatabaseObject[]::new);
 	}
 
-	private DatabaseSnapshot createLocalDatabaseSnapshot(Connection connection, List<DbTableDto> dbTableDtoList) {
-
-		try {
-
-			Database localDatabase = getRemoteDatabase(connection);
-			DatabaseSnapshot localDatabaseSnapshot = new EmptyDatabaseSnapshot(localDatabase);
-			DatabaseObjectCollection databaseObjectCollection = (DatabaseObjectCollection) localDatabaseSnapshot.getSerializableFieldValue("objects");
-			DatabaseObject[] databaseObjectArray = generateDatabaseObjectArray(localDatabase, dbTableDtoList);
-			for (DatabaseObject databaseObject : databaseObjectArray) {
-				databaseObjectCollection.add(databaseObject);
-			}
-			return localDatabaseSnapshot;
-		} catch (RuntimeException e) {
-			log.error(e.getMessage());
-			throw e;
-		} catch (Exception ex) {
-			throw new IllegalStateException(ex);
-		}
-	}
-
 	private Database getRemoteDatabase(Connection connection) throws DatabaseException {
 		return DatabaseFactory.getInstance()
 				.findCorrectDatabaseImplementation(new JdbcConnection(connection));
 	}
 
-	private DatabaseSnapshot generateRemoteDatabaseSnapshot(Connection connection) {
-
-		try {
-
-			Database remoteDatabase = getRemoteDatabase(connection);
-			return generateRemoteDatabaseSnapshot(remoteDatabase);
-		} catch (RuntimeException e) {
-			throw e;
-		} catch (Exception ex) {
-			throw new IllegalStateException(ex);
-		}
-	}
-
-	private DatabaseSnapshot generateRemoteDatabaseSnapshot(Database remoteDatabase)
+	private DatabaseSnapshot generateRemoteDatabaseSnapshot(Connection connection)
 			throws DatabaseException, InvalidExampleException {
-		Set<Class<? extends DatabaseObject>> compareTypes = getCompareTypeSet();
-		return SnapshotGeneratorFactory.getInstance()
-				.createSnapshot(
-						remoteDatabase.getDefaultSchema(), remoteDatabase,
-						new SnapshotControl(remoteDatabase,
-								compareTypes.toArray(new Class[compareTypes.size()])));
+		try {
+			Database remoteDatabase = getRemoteDatabase(connection);
+
+			Set<Class<? extends DatabaseObject>> compareTypes = getCompareTypeSet();
+			return SnapshotGeneratorFactory.getInstance()
+					.createSnapshot(
+							remoteDatabase.getDefaultSchema(), remoteDatabase,
+							new SnapshotControl(remoteDatabase,
+									compareTypes.toArray(new Class[compareTypes.size()])));
+		} catch (Exception ex) {
+			throw new RuntimeException(ex);
+		}
 	}
 
 	private Set<Class<? extends DatabaseObject>> getCompareTypeSet() {
@@ -232,22 +246,6 @@ public class LiquibaseService {
 		compareTypes.add(Schema.class);
 		compareTypes.add(Catalog.class);
 		return compareTypes;
-	}
-
-	private File createDiff(DatabaseSnapshot localDatabaseSnapshot, DatabaseSnapshot remoteDatabaseSnapshot)
-			throws LiquibaseException, IOException {
-		DiffResult diffResult = DiffGeneratorFactory.getInstance()
-				.compare(localDatabaseSnapshot, remoteDatabaseSnapshot, createCompareControl());
-
-		DiffToChangeLog diffToChangeLog = new DiffToChangeLog(diffResult, createDiffOutputControl());
-
-		diffToChangeLog.setChangeSetAuthor("ams");
-		diffToChangeLog.setChangeSetContext("production");
-		diffToChangeLog.setIdRoot("text.xml");
-
-		List<ChangeSet> changeSets = diffToChangeLog.generateChangeSets();
-		return createXMLFile(changeSets);
-
 	}
 
 	private CompareControl createCompareControl() {
