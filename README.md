@@ -82,5 +82,6 @@ Search API Request:
 ```
 
 Liquibase Documentation: https://docs.liquibase.com/home.html
+
 QueryDsl Documentation: http://querydsl.com/static/querydsl/5.0.0/apidocs/
 
