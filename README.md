@@ -3,6 +3,10 @@
 #LIQUIBASE:
 Providing liquibase with meta data for tables and columns dynamically to create them into a static form.
 
+API Request URL:
+```
+http://localhost:8080/database-schema/publish-changes
+```
 API Request Body:
 ```
 [
@@ -39,8 +43,11 @@ API Request Body:
 
 #QUERYDSL:
 Using querydsl we can perform the CRUD operations on the tables without the need of having static entities or repositories
-
-Insert API Request:
+Insert API Request URL:
+```
+http://localhost:8080/save/book
+```
+Insert API Request Body:
 ```
 {
     "title": "FEABCD",
@@ -48,7 +55,12 @@ Insert API Request:
 }
 ```
 
-Update API Request:
+Update API Request URL:
+```
+http://localhost:8080/save/book
+```
+
+Update API Request Body:
 ```
 {
     "id": 2,
@@ -57,7 +69,12 @@ Update API Request:
 }
 ```
 
-Search API Request:
+Search API Request URL:
+ ```
+ http://localhost:8080/query/book
+ ```
+
+Search API Request Body:
 ```
 {
     "fields": [
