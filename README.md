@@ -3,6 +3,7 @@
 #LIQUIBASE:
 Providing liquibase with meta data for tables and columns dynamically to create them into a static form.
 API Request Body:
+```
 [
     {
         "name": "book",
@@ -33,24 +34,30 @@ API Request Body:
         ]
     }
 ]
+```
 
 #QUERYDSL:
 Using querydsl we can perform the CRUD operations on the tables without the need of having static entities or repositories
 
 Insert API Request:
+```
 {
     "title": "FEABCD",
     "isbn": "978-1-56619-909-10"
 }
+```
 
 Update API Request:
+```
 {
     "id": 2,
     "title": "FEABCD",
     "isbn": "978-1-56619-909-2"
 }
+```
 
 Search API Request:
+```
 {
     "fields": [
         "id",
@@ -72,6 +79,7 @@ Search API Request:
         }
     ]
 }
+```
 
 Liquibase Documentation: https://docs.liquibase.com/home.html
 QueryDsl Documentation: http://querydsl.com/static/querydsl/5.0.0/apidocs/
